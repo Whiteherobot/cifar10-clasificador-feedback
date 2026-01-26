@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CIFAR-10 Demo</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #111827;
+      --accent: #22d3ee;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --error: #f87171;
+      --success: #34d399;
+    }
+    body {
+      margin: 0;
+      font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: radial-gradient(circle at 20% 20%, #1f2937 0, #0f172a 35%),
+                  radial-gradient(circle at 80% 0%, #0ea5e9 0, #0f172a 40%),
+                  var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .shell {
+      width: min(100%, 900px);
+      background: var(--card);
+      border: 1px solid #1f2937;
+      border-radius: 16px;
+      box-shadow: 0 10px 60px rgba(0,0,0,0.35);
+      padding: 24px;
+    }
+    h1 { margin: 0 0 8px; font-size: 24px; letter-spacing: -0.01em; }
+    p { margin: 6px 0 14px; color: var(--muted); }
+    .row { display: flex; flex-wrap: wrap; gap: 12px; }
+    .card {
+      flex: 1 1 260px;
+      background: #0b1220;
+      border: 1px solid #1f2937;
+      border-radius: 12px;
+      padding: 16px;
+    }
+    label { display: block; font-weight: 600; margin-bottom: 6px; }
+    input[type="file"], input[type="text"], input[type="number"] {
+      width: 100%;
+      background: #0f172a;
+      color: var(--text);
+      border: 1px solid #1f2937;
+      padding: 10px;
+      border-radius: 10px;
+      box-sizing: border-box;
+    }
+    button {
+      background: linear-gradient(90deg, #0ea5e9, #22d3ee);
+      color: #0b1220;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 700;
+      box-shadow: 0 10px 30px rgba(34, 211, 238, 0.25);
+    }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .result { margin-top: 10px; font-size: 14px; line-height: 1.6; }
+    .pill { display: inline-block; padding: 4px 10px; border-radius: 12px; background: #1f2937; }
+    .pill.success { background: rgba(52, 211, 153, 0.15); color: var(--success); }
+    .pill.error { background: rgba(248, 113, 113, 0.15); color: var(--error); }
+    ul { padding-left: 18px; }
+    li { margin: 4px 0; }
+    .top3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+    .badge { background: #1f2937; padding: 8px 10px; border-radius: 10px; }
+    .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-top: 12px; }
+    .thumb {
+      border: 1px solid #1f2937;
+      border-radius: 12px;
+      padding: 10px;
+      background: #0f172a;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      cursor: pointer;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .thumb.selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.25);
+    }
+    .thumb img { width: 100%; border-radius: 10px; object-fit: cover; aspect-ratio: 1 / 1; }
+    .thumb .meta { font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; }
+    .thumb .pred { font-weight: 700; color: var(--text); }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <h1>Demo FastAPI + CIFAR-10</h1>
+    <p>Sube varias imágenes, mira sus predicciones, selecciona la que esté mal, envía el feedback con la clase correcta y luego reentrena rápido con esos ejemplos.</p>
+
+    <div class="row">
+      <div class="card">
+        <label for="file">Imágenes (JPG/PNG/BMP) — puedes seleccionar varias</label>
+        <input id="file" type="file" accept="image/*" multiple />
+        <button id="predictBtn" style="margin-top:10px">Predecir todo</button>
+        <div class="result" style="margin-top:6px; font-size:13px; color:var(--muted)">Haz clic en una tarjeta para marcarla como la mal predicha.</div>
+      </div>
+      <div class="card">
+        <label for="trueLabel">Etiqueta correcta (CIFAR-10)</label>
+        <input id="trueLabel" type="text" placeholder="cat, dog, airplane..." />
+        <button id="feedbackBtn" style="margin-top:10px">Enviar feedback de la seleccionada</button>
+        <div id="feedbackResult" class="result"></div>
+      </div>
+      <div class="card">
+        <label>Reentrenar con feedback</label>
+        <div class="row" style="gap:8px">
+          <input id="epochs" type="number" min="1" max="10" value="3" style="flex:1" />
+          <input id="lr" type="text" value="0.0001" style="flex:1" />
+        </div>
+        <button id="retrainBtn" style="margin-top:10px">Reentrenar</button>
+        <div id="retrainResult" class="result"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <strong>Resultados y selección de feedback</strong>
+      <div id="gallery" class="gallery"></div>
+      <div id="predictResult" class="result" style="margin-top:10px"></div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <strong>Clases soportadas:</strong>
+      <div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:6px;">
+        <span class="pill">airplane</span>
+        <span class="pill">automobile</span>
+        <span class="pill">bird</span>
+        <span class="pill">cat</span>
+        <span class="pill">deer</span>
+        <span class="pill">dog</span>
+        <span class="pill">frog</span>
+        <span class="pill">horse</span>
+        <span class="pill">ship</span>
+        <span class="pill">truck</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const predictBtn = document.getElementById('predictBtn');
+    const feedbackBtn = document.getElementById('feedbackBtn');
+    const retrainBtn = document.getElementById('retrainBtn');
+    const fileInput = document.getElementById('file');
+    const trueLabel = document.getElementById('trueLabel');
+    const predictResult = document.getElementById('predictResult');
+    const feedbackResult = document.getElementById('feedbackResult');
+    const retrainResult = document.getElementById('retrainResult');
+    const gallery = document.getElementById('gallery');
+
+    let filesData = [];
+    let selectedIndex = null;
+
+    function showResult(el, html) {
+      el.innerHTML = html;
+    }
+
+    function renderGallery() {
+      if (!filesData.length) {
+        gallery.innerHTML = '<span class="pill error">No hay imágenes cargadas</span>';
+        return;
+      }
+      gallery.innerHTML = filesData.map((item, idx) => {
+        const sel = idx === selectedIndex ? 'selected' : '';
+        const top3 = (item.top3 || []).map(t => `<span class="badge">${t.label} · ${t.confidence}%</span>`).join('');
+        return `
+          <div class="thumb ${sel}" data-idx="${idx}">
+            <img src="${item.url}" alt="preview-${idx}" />
+            <div class="meta"><span>${item.file.name}</span><span class="pred">${item.pred_label || 'sin pred.'}</span></div>
+            ${item.confidence ? `<div class="pill success">${item.confidence}%</div>` : ''}
+            <div class="chips">${top3}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    gallery.addEventListener('click', (e) => {
+      const thumb = e.target.closest('.thumb');
+      if (!thumb) return;
+      selectedIndex = parseInt(thumb.dataset.idx, 10);
+      renderGallery();
+    });
+
+    async function predict() {
+      if (!fileInput.files.length) {
+        showResult(predictResult, '<span class="pill error">Sube una imagen primero</span>');
+        return;
+      }
+      filesData = Array.from(fileInput.files).map(f => ({ file: f, url: URL.createObjectURL(f) }));
+      selectedIndex = null;
+      renderGallery();
+      predictBtn.disabled = true;
+      showResult(predictResult, '<span class="pill">Procesando...</span>');
+      for (let i = 0; i < filesData.length; i++) {
+        const fd = new FormData();
+        fd.append('file', filesData[i].file);
+        try {
+          const res = await fetch('/predict', { method: 'POST', body: fd });
+          const out = await res.json();
+          if (!res.ok) throw new Error(out.detail || 'Error');
+          filesData[i] = { ...filesData[i], ...out };
+        } catch (err) {
+          filesData[i] = { ...filesData[i], pred_label: 'error', confidence: 0, top3: [] };
+          showResult(predictResult, `<span class="pill error">${err.message}</span>`);
+        }
+      }
+      renderGallery();
+      showResult(predictResult, '<span class="pill success">Predicciones listas. Selecciona una tarjeta si está mal.</span>');
+      predictBtn.disabled = false;
+    }
+
+    async function sendFeedback() {
+      if (selectedIndex === null || !filesData[selectedIndex]) {
+        showResult(feedbackResult, '<span class="pill error">Selecciona la imagen mal predicha</span>');
+        return;
+      }
+      const label = trueLabel.value.trim();
+      if (!label) {
+        showResult(feedbackResult, '<span class="pill error">Escribe la etiqueta correcta</span>');
+        return;
+      }
+      feedbackBtn.disabled = true;
+      const data = new FormData();
+      data.append('true_label', label);
+      data.append('file', filesData[selectedIndex].file);
+      try {
+        const res = await fetch('/feedback?true_label=' + encodeURIComponent(label), { method: 'POST', body: data });
+        const out = await res.json();
+        if (!res.ok) throw new Error(out.detail || 'Error');
+        showResult(feedbackResult, `<span class="pill success">${out.message}</span>`);
+      } catch (err) {
+        showResult(feedbackResult, `<span class="pill error">${err.message}</span>`);
+      } finally {
+        feedbackBtn.disabled = false;
+      }
+    }
+
+    async function retrain() {
+      retrainBtn.disabled = true;
+      const epochs = parseInt(document.getElementById('epochs').value || '3', 10);
+      const lr = parseFloat(document.getElementById('lr').value || '0.0001');
+      try {
+        const res = await fetch(`/retrain?epochs=${epochs}&learning_rate=${lr}`, { method: 'POST' });
+        const out = await res.json();
+        if (!res.ok) throw new Error(out.detail || 'Error');
+        showResult(retrainResult, `<span class="pill success">${out.message}</span>`);
+      } catch (err) {
+        showResult(retrainResult, `<span class="pill error">${err.message}</span>`);
+      } finally {
+        retrainBtn.disabled = false;
+      }
+    }
+
+    predictBtn.addEventListener('click', predict);
+    feedbackBtn.addEventListener('click', sendFeedback);
+    retrainBtn.addEventListener('click', retrain);
+  </script>
+</body>
+</html>

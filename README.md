@@ -1,101 +1,127 @@
-# Proyecto ML con CMM - Clasificacion CIFAR-10
+# CIFAR-10: Notebooks + Web/API (FastAPI)
 
-Guia profesional para preparar datos CIFAR-10, entrenar un MLP y ejecutar predicciones en tres cuadernos Jupyter.
+Guía única para levantar el proyecto desde los cuadernos (Jupyter) y hasta la demo web con FastAPI + HTML estático.
 
----
+## 1. Requisitos
+- Python 3.10+ (64-bit recomendado)
+- Windows/macOS/Linux
+- (Opcional) Git
 
-## Requisitos
+## 2. Instalación rápida
+### Windows
+```powershell
+py -m venv .venv
+.\.venv\Scripts\activate
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+### macOS/Linux
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
 
-- Python 3.10+ (recomendado). Durante la instalacion en Windows, marcar "Add Python to PATH".
-- Git (opcional, solo si clonas).
-- Windows, macOS o Linux.
+## 3. Uso con cuadernos Jupyter (pipeline completo)
+1) **Arrancar Jupyter**
+```bash
+jupyter notebook
+```
+2) **Cuaderno 01 – Preparación de datos** (`01_preparacion_dataset.ipynb`)
+  - Descarga CIFAR-10, normaliza y guarda splits (`data/*.npz`).
+3) **Cuaderno 02 – Entrenamiento** (`02_modelado_entrenamiento_cmm.ipynb`)
+  - Entrena la CNN optimizada y genera `models/cnn_model_*.keras` + `models/latest_model.txt`.
+  - Guarda dataset focal para fine-tuning en `focus/X_focus.npy` y `focus/y_focus.npy`.
+4) **Cuaderno 03 – Pruebas y fine-tuning** (`03_pruebas_y_predicciones.ipynb`)
+  - Coloca imágenes en `data/test_images/` (o usa la celda para crear `data/test_images_32x32`).
+  - Ejecuta predicciones, analiza top-3/confianza y ejecuta fine-tuning por clases si lo necesitas.
 
----
+## 4. Uso del servidor FastAPI + UI web
+1) **Activar entorno**
+```powershell
+# Windows
+.\.venv\Scripts\activate
+```
+```bash
+# macOS/Linux
+source .venv/bin/activate
+```
+2) **Iniciar servidor**
+```bash
+python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+3) **Abrir la UI**
+- Navega a http://localhost:8000
+- Carga varias imágenes y pulsa "Predecir todo".
+- Haz clic en la tarjeta mal predicha, escribe la etiqueta correcta y envía feedback.
+- Opcional: ejecuta "Reentrenar" (usa feedback guardado en `data/feedback/`).
+4) **API Docs**
+- Swagger: http://localhost:8000/docs
+- Endpoints clave:
+  - `POST /predict` (file)
+  - `POST /feedback` (true_label + file)
+  - `POST /retrain` (epochs, learning_rate)
+  - `GET /health`
 
-## Instalacion rapida en Windows (setup.bat / setup.ps1)
-
-1. Descarga o clona el repositorio.
-2. Desde el Explorador: doble clic en `setup.bat`. Si no funciona, clic derecho en `setup.ps1` y elige ejecutar con PowerShell.
-
-El script crea `.venv`, instala dependencias y deja listo Jupyter. Tiempo estimado: 5 minutos.
-
----
-
-## Instalacion manual
-
-1. Crear entorno virtual
-    - Windows: `py -m venv .venv` y luego `.venv\Scripts\activate`
-    - macOS/Linux: `python3 -m venv .venv` y luego `source .venv/bin/activate`
-2. Instalar dependencias: `pip install --upgrade pip` y `pip install -r requirements.txt`
-3. Iniciar Jupyter: `jupyter notebook` y abrir http://localhost:8888
-
----
-
-## Estructura del proyecto
-
+## 5. Estructura mínima
 ```
 README.md
 requirements.txt
-setup.bat / setup.ps1
-.venv/ (generado)
+main.py                  # FastAPI
+static/index.html        # UI
 01_preparacion_dataset.ipynb
 02_modelado_entrenamiento_cmm.ipynb
 03_pruebas_y_predicciones.ipynb
-data/ (generado: *.npz, test_images/)
-models/ (generado: model_*.joblib, *_meta.joblib)
-utils/transform.py
+models/                  # cnn_model_*.keras, latest_model.txt
+focus/                   # X_focus.npy, y_focus.npy
+data/
+  test_images/
+  test_images_32x32/
+  feedback/<label>/
 ```
 
----
+## 6. Flujo sugerido
+- Primera vez: Cuaderno 01 → Cuaderno 02 → probar en Cuaderno 03.
+- Para demo web: tener al menos un modelo en `models/` (creado en Cuaderno 02) y arrancar FastAPI.
+- Para mejorar con feedback: usar la UI o `/feedback`, luego `/retrain`.
 
-## Flujo recomendado (orden de ejecucion)
+## 7. Problemas comunes
+- **"No se encontró modelo"**: ejecuta Cuaderno 02 para crear `models/cnn_model_*.keras` y `models/latest_model.txt`.
+- **Sin datos de feedback para reentrenar**: envía ejemplos a `/feedback` (se guardan en `data/feedback/<label>/`).
+- **Imágenes fuera de 32×32**: la UI reescala; para mejores resultados usa la celda de preprocesado en Cuaderno 03.
+- **Puerto ocupado**: cambia a `--port 8001`.
 
-1. Preparar dataset: ejecutar `01_preparacion_dataset.ipynb`
-    - Descarga CIFAR-10, normaliza y guarda `data/*.npz`.
-2. Entrenar modelo: ejecutar `02_modelado_entrenamiento_cmm.ipynb`
-    - Carga NPZ, entrena `MLPClassifier` (1024, 512, 256) con early stopping, guarda `models/model_<ts>.joblib` y metadatos.
-3. Probar predicciones: ejecutar `03_pruebas_y_predicciones.ipynb`
-    - Carga el ultimo modelo, procesa imagenes en `data/test_images/` y muestra predicciones CIFAR-10.
+## 8. Comandos cortos
+```bash
+# Activar venv (Windows)
+.\.venv\Scripts\activate
+# Activar venv (macOS/Linux)
+source .venv/bin/activate
+# Servidor FastAPI
+python -m uvicorn main:app --reload --port 8000
+# Jupyter Notebook
+jupyter notebook
+```
 
----
+Listo: con esto puedes ir de los cuadernos a la demo web y reentrenar usando feedback.
 
-## Uso de los cuadernos
+1. Revisa la sección de Solución de Problemas
+2. Verifica el Checklist de Verificación
+3. Consulta los comentarios en los cuadernos
+4. Revisa los metadatos de los modelos guardados
 
-- Cuaderno 1: genera `cifar10_raw.npz`, `processed_cifar10.npz`, `historical.npz`, `new_samples.npz`.
-- Cuaderno 2: entrena MLP con capas (1024, 512, 256), `learning_rate_init=5e-4`, `alpha=1e-4`, entrenamiento incremental y early stopping; versiona el mejor checkpoint.
-- Cuaderno 3: redimensiona a 32x32 RGB, aplica el transformador guardado (o normalizacion simple), predice y muestra grilla de imagenes; exporta `data/predictions_images.csv` y `data/predictions_images.npz`.
-
----
-
-## Resultados esperados (referencia)
-
-- Entrenamiento: accuracy de validacion aproximada 50-70% con imagenes aplanadas.
-- Prediccion: cuadrilla de imagenes con etiqueta CIFAR-10 y CSV/NPZ de resultados.
-
----
-
-## Solucion de problemas
-
-- Falta dataset procesado: ejecutar el cuaderno 1 completo.
-- No hay modelos en `models/`: ejecutar el cuaderno 2 completo.
-- Jupyter no abre: `jupyter notebook --ip=127.0.0.1 --port=8888`.
-- TensorFlow ausente: `pip install --upgrade -r requirements.txt`.
-
----
-
-## Requerimientos tecnicos
-
-- Minimo: 4 GB RAM, CPU dual-core, 500 MB libres.
-- Recomendado: 8 GB RAM, CPU quad-core; GPU opcional acelera TensorFlow.
+**Configuración del entorno:**
+- Python 3.10+
+- Entorno virtual activado
+- Dependencias instaladas según `requirements.txt`
 
 ---
 
-## Contacto
+## 📄 Licencia
 
-Si necesitas soporte, verifica primero la seccion de solucion de problemas y la configuracion del entorno (Python 3.10+, entorno virtual activado, dependencias instaladas).
-- [ ] Cuaderno 01 ejecutado completamente
-- [ ] Cuaderno 02 ejecutado completamente
-- [ ] Imágenes copiadas a `data/test_images/` (opcional)
-- [ ] Cuaderno 03 ejecutado completamente
-- [ ] Modelos guardados en `models/` verificados
+Este proyecto es de código abierto para fines educativos y de investigación.
 
+---
+
+**¡Feliz entrenamiento! 🎯**

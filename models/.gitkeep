@@ -1,0 +1,2 @@
+# Este archivo mantiene la carpeta models/ en el repositorio
+# Los modelos .joblib están excluidos en .gitignore (archivos pesados)

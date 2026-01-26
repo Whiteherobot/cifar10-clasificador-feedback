@@ -1,0 +1,2 @@
+# Este archivo mantiene la carpeta data/ en el repositorio
+# Los archivos .npz, .csv y otros datos pesados están excluidos en .gitignore
