@@ -1,127 +1,75 @@
-# CIFAR-10: Notebooks + Web/API (FastAPI)
+# cifar10-clasificador-feedback
 
-Guía única para levantar el proyecto desde los cuadernos (Jupyter) y hasta la demo web con FastAPI + HTML estático.
+[![CI](https://github.com/Whiteherobot/cifar10-clasificador-feedback/actions/workflows/ci.yml/badge.svg)](https://github.com/Whiteherobot/cifar10-clasificador-feedback/actions/workflows/ci.yml)
 
-## 1. Requisitos
-- Python 3.10+ (64-bit recomendado)
-- Windows/macOS/Linux
-- (Opcional) Git
+Clasificador de imágenes de CIFAR-10 (avión, auto, pájaro, gato, ciervo, perro,
+rana, caballo, barco y camión) con una CNN en Keras, servido con FastAPI. Desde
+la página se suben imágenes, se corrigen las predicciones equivocadas y se
+re-entrena el modelo con esas correcciones. Proyecto de Inteligencia Artificial
+(enero de 2026), hecho en pareja.
 
-## 2. Instalación rápida
-### Windows
-```powershell
-py -m venv .venv
-.\.venv\Scripts\activate
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-```
-### macOS/Linux
+## Cuadernos
+
+| Cuaderno | Qué hace |
+|---|---|
+| `01_preparacion_dataset.ipynb` | Descarga CIFAR-10, normaliza y guarda los conjuntos en `data/`. |
+| `02_modelado_entrenamiento_cmm.ipynb` | Entrena la CNN (bloques convolucionales con batch normalization y dropout, aumento de datos). Llega a 84 % de accuracy en validación (12 000 imágenes). Guarda el modelo en `models/` y una muestra del conjunto en `focus/`. |
+| `03_pruebas_y_predicciones.ipynb` | Prueba el modelo con imágenes nuevas, analiza el top 3 y la accuracy por clase. |
+
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-```
-
-## 3. Uso con cuadernos Jupyter (pipeline completo)
-1) **Arrancar Jupyter**
-```bash
-jupyter notebook
-```
-2) **Cuaderno 01 – Preparación de datos** (`01_preparacion_dataset.ipynb`)
-  - Descarga CIFAR-10, normaliza y guarda splits (`data/*.npz`).
-3) **Cuaderno 02 – Entrenamiento** (`02_modelado_entrenamiento_cmm.ipynb`)
-  - Entrena la CNN optimizada y genera `models/cnn_model_*.keras` + `models/latest_model.txt`.
-  - Guarda dataset focal para fine-tuning en `focus/X_focus.npy` y `focus/y_focus.npy`.
-4) **Cuaderno 03 – Pruebas y fine-tuning** (`03_pruebas_y_predicciones.ipynb`)
-  - Coloca imágenes en `data/test_images/` (o usa la celda para crear `data/test_images_32x32`).
-  - Ejecuta predicciones, analiza top-3/confianza y ejecuta fine-tuning por clases si lo necesitas.
-
-## 4. Uso del servidor FastAPI + UI web
-1) **Activar entorno**
-```powershell
-# Windows
-.\.venv\Scripts\activate
-```
-```bash
-# macOS/Linux
-source .venv/bin/activate
-```
-2) **Iniciar servidor**
-```bash
-python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
-```
-3) **Abrir la UI**
-- Navega a http://localhost:8000
-- Carga varias imágenes y pulsa "Predecir todo".
-- Haz clic en la tarjeta mal predicha, escribe la etiqueta correcta y envía feedback.
-- Opcional: ejecuta "Reentrenar" (usa feedback guardado en `data/feedback/`).
-4) **API Docs**
-- Swagger: http://localhost:8000/docs
-- Endpoints clave:
-  - `POST /predict` (file)
-  - `POST /feedback` (true_label + file)
-  - `POST /retrain` (epochs, learning_rate)
-  - `GET /health`
-
-## 5. Estructura mínima
-```
-README.md
-requirements.txt
-main.py                  # FastAPI
-static/index.html        # UI
-01_preparacion_dataset.ipynb
-02_modelado_entrenamiento_cmm.ipynb
-03_pruebas_y_predicciones.ipynb
-models/                  # cnn_model_*.keras, latest_model.txt
-focus/                   # X_focus.npy, y_focus.npy
-data/
-  test_images/
-  test_images_32x32/
-  feedback/<label>/
-```
-
-## 6. Flujo sugerido
-- Primera vez: Cuaderno 01 → Cuaderno 02 → probar en Cuaderno 03.
-- Para demo web: tener al menos un modelo en `models/` (creado en Cuaderno 02) y arrancar FastAPI.
-- Para mejorar con feedback: usar la UI o `/feedback`, luego `/retrain`.
-
-## 7. Problemas comunes
-- **"No se encontró modelo"**: ejecuta Cuaderno 02 para crear `models/cnn_model_*.keras` y `models/latest_model.txt`.
-- **Sin datos de feedback para reentrenar**: envía ejemplos a `/feedback` (se guardan en `data/feedback/<label>/`).
-- **Imágenes fuera de 32×32**: la UI reescala; para mejores resultados usa la celda de preprocesado en Cuaderno 03.
-- **Puerto ocupado**: cambia a `--port 8001`.
-
-## 8. Comandos cortos
-```bash
-# Activar venv (Windows)
-.\.venv\Scripts\activate
-# Activar venv (macOS/Linux)
-source .venv/bin/activate
-# Servidor FastAPI
-python -m uvicorn main:app --reload --port 8000
-# Jupyter Notebook
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements-cuadernos.txt
 jupyter notebook
 ```
 
-Listo: con esto puedes ir de los cuadernos a la demo web y reentrenar usando feedback.
+Los cuadernos se dejaron con sus salidas. Los modelos y datos que generan no
+están en el repo (pesan cientos de MB).
 
-1. Revisa la sección de Solución de Problemas
-2. Verifica el Checklist de Verificación
-3. Consulta los comentarios en los cuadernos
-4. Revisa los metadatos de los modelos guardados
+## API y página
 
-**Configuración del entorno:**
-- Python 3.10+
-- Entorno virtual activado
-- Dependencias instaladas según `requirements.txt`
+Con un modelo entrenado en `models/`:
 
----
+```bash
+pip install -r requirements.txt
+uvicorn main:app --reload      # http://localhost:8000
+```
 
-## 📄 Licencia
+| Método | Ruta | |
+|---|---|---|
+| POST | `/predict` | Imagen (cualquier tamaño, se lleva a 32×32) → clase, confianza y top 3. |
+| POST | `/feedback?true_label=cat` | Guarda la imagen con su clase correcta en `data/feedback/`. |
+| POST | `/retrain?epochs=3&learning_rate=0.0001` | Re-entrena con el feedback y pasa a usar el modelo nuevo. |
+| GET | `/health` | Modelo en uso. |
 
-Este proyecto es de código abierto para fines educativos y de investigación.
+El re-entrenamiento no usa solo las imágenes corregidas: con unas pocas, el
+modelo aprende esas y olvida el resto. Por cada imagen de feedback mezcla 20
+ejemplos del conjunto original (`focus/`). Se entrena una copia en otro hilo,
+así las predicciones siguen funcionando con el modelo anterior hasta que la
+copia termina.
 
----
+## Pruebas
 
-**¡Feliz entrenamiento! 🎯**
+```bash
+pip install pytest httpx
+pytest
+```
+
+Usan una CNN mínima sin entrenar para recorrer la API: predicción, imágenes
+inválidas, feedback, re-entrenamiento con datos de repaso, parámetros fuera de
+rango y la falta de modelo.
+
+## De dónde sale
+
+En 2026 se limpió el repo (antes `iaJordy`): tenía 19 modelos de 33 MB cada uno,
+los datos generados, las imágenes de feedback, cinco archivos de notas de la
+sesión de trabajo y un `requirements.txt` de 133 paquetes en UTF-16 que no se
+podía instalar fuera de Windows. También se corrigió el re-entrenamiento (que
+hacía olvidar al modelo y bloqueaba la API mientras entrenaba) y se agregaron
+pruebas y CI.
+
+## Autores
+
+- Michael Lata ([@Whiteherobot](https://github.com/Whiteherobot))
+- Jordy Romero ([@JordyRomeroa](https://github.com/JordyRomeroa))
+
+Licencia MIT.
