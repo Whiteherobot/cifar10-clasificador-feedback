@@ -110,7 +110,19 @@
       </div>
       <div class="card">
         <label for="trueLabel">Etiqueta correcta (CIFAR-10)</label>
-        <input id="trueLabel" type="text" placeholder="cat, dog, airplane..." />
+        <select id="trueLabel">
+          <option value="">Elegir...</option>
+          <option value="airplane">airplane</option>
+          <option value="automobile">automobile</option>
+          <option value="bird">bird</option>
+          <option value="cat">cat</option>
+          <option value="deer">deer</option>
+          <option value="dog">dog</option>
+          <option value="frog">frog</option>
+          <option value="horse">horse</option>
+          <option value="ship">ship</option>
+          <option value="truck">truck</option>
+        </select>
         <button id="feedbackBtn" style="margin-top:10px">Enviar feedback de la seleccionada</button>
         <div id="feedbackResult" class="result"></div>
       </div>
@@ -162,6 +174,18 @@
     let filesData = [];
     let selectedIndex = null;
 
+    // FastAPI devuelve detail como texto o, si falla la validación, como lista.
+    function mensajeError(out) {
+      if (Array.isArray(out.detail)) return out.detail.map((d) => d.msg).join('; ');
+      return out.detail || 'Error';
+    }
+
+    function escapar(texto) {
+      const div = document.createElement('div');
+      div.textContent = String(texto);
+      return div.innerHTML;
+    }
+
     function showResult(el, html) {
       el.innerHTML = html;
     }
@@ -208,7 +232,7 @@
         try {
           const res = await fetch('/predict', { method: 'POST', body: fd });
           const out = await res.json();
-          if (!res.ok) throw new Error(out.detail || 'Error');
+          if (!res.ok) throw new Error(mensajeError(out));
           filesData[i] = { ...filesData[i], ...out };
         } catch (err) {
           filesData[i] = { ...filesData[i], pred_label: 'error', confidence: 0, top3: [] };
@@ -225,9 +249,9 @@
         showResult(feedbackResult, '<span class="pill error">Selecciona la imagen mal predicha</span>');
         return;
       }
-      const label = trueLabel.value.trim();
+      const label = trueLabel.value;
       if (!label) {
-        showResult(feedbackResult, '<span class="pill error">Escribe la etiqueta correcta</span>');
+        showResult(feedbackResult, '<span class="pill error">Elige la etiqueta correcta</span>');
         return;
       }
       feedbackBtn.disabled = true;
@@ -237,10 +261,11 @@
       try {
         const res = await fetch('/feedback?true_label=' + encodeURIComponent(label), { method: 'POST', body: data });
         const out = await res.json();
-        if (!res.ok) throw new Error(out.detail || 'Error');
-        showResult(feedbackResult, `<span class="pill success">${out.message}</span>`);
+        if (!res.ok) throw new Error(mensajeError(out));
+        const total = Object.values(out.por_clase).reduce((a, b) => a + b, 0);
+        showResult(feedbackResult, `<span class="pill success">Guardada como ${escapar(label)} (${total} imágenes de feedback)</span>`);
       } catch (err) {
-        showResult(feedbackResult, `<span class="pill error">${err.message}</span>`);
+        showResult(feedbackResult, `<span class="pill error">${escapar(err.message)}</span>`);
       } finally {
         feedbackBtn.disabled = false;
       }
@@ -253,10 +278,10 @@
       try {
         const res = await fetch(`/retrain?epochs=${epochs}&learning_rate=${lr}`, { method: 'POST' });
         const out = await res.json();
-        if (!res.ok) throw new Error(out.detail || 'Error');
-        showResult(retrainResult, `<span class="pill success">${out.message}</span>`);
+        if (!res.ok) throw new Error(mensajeError(out));
+        showResult(retrainResult, `<span class="pill success">Modelo nuevo con ${out.ejemplos} ejemplos (accuracy ${out.accuracy})</span>`);
       } catch (err) {
-        showResult(retrainResult, `<span class="pill error">${err.message}</span>`);
+        showResult(retrainResult, `<span class="pill error">${escapar(err.message)}</span>`);
       } finally {
         retrainBtn.disabled = false;
       }
