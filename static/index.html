@@ -236,7 +236,7 @@
           filesData[i] = { ...filesData[i], ...out };
         } catch (err) {
           filesData[i] = { ...filesData[i], pred_label: 'error', confidence: 0, top3: [] };
-          showResult(predictResult, `<span class="pill error">${err.message}</span>`);
+          showResult(predictResult, `<span class="pill error">${escapar(err.message)}</span>`);
         }
       }
       renderGallery();
