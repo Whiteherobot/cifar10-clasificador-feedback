@@ -1,105 +1,13 @@
-# ===================================
-# ENTORNO VIRTUAL Y DEPENDENCIAS
-# ===================================
 .venv/
-venv/
-env/
-ENV/
-*.egg-info/
-dist/
-build/
-
-# ===================================
-# PYTHON CACHE
-# ===================================
 __pycache__/
 *.pyc
-*.pyo
-*.pyd
-*.so
-*.dll
-*.dylib
-
-# ===================================
-# JUPYTER NOTEBOOKS
-# ===================================
 .ipynb_checkpoints/
-*.ipynb_checkpoints
 
-# ===================================
-# IDE Y EDITORES
-# ===================================
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.DS_Store
-Thumbs.db
-
-# ===================================
-# DATOS PROCESADOS (PESADOS)
-# ===================================
-# Dataset CIFAR-10 y procesados
+# Datos y modelos que generan los cuadernos y la API (pesan cientos de MB)
 data/*.npz
-data/*.npy
-data/*.parquet
 data/*.csv
-data/*.pkl
-data/*.pickle
-
-# Imágenes de prueba (opcional: comentar si quieres versionar)
-data/test_images/*.jpg
-data/test_images/*.jpeg
-data/test_images/*.png
-data/test_images/*.bmp
-
-# ===================================
-# MODELOS ENTRENADOS (PESADOS)
-# ===================================
-# Modelos joblib
-models/*.joblib
-models/*.pkl
-models/*.pickle
-models/*.h5
-models/*.pt
-models/*.pth
-models/*.onnx
-models/*.pb
-
-# Metadatos de modelos
-models/*_meta.joblib
-models/latest_model.txt
-
-# ===================================
-# DATASET DE REENTRENAMIENTO (MUY PESADO)
-# ===================================
+data/feedback/
+data/test_images*/
 focus/
-focus/*.npy
-focus/*.npz
-
-# ===================================
-# LOGS Y RESULTADOS
-# ===================================
-logs/
-*.log
-runs/
-mlruns/
-tensorboard/
-
-# ===================================
-# ARCHIVOS TEMPORALES
-# ===================================
-*.tmp
-*.temp
-*.bak
-*.swp
-.cache/
-
-# ===================================
-# MANTENER ESTRUCTURA DE CARPETAS
-# ===================================
-# Permitir que las carpetas vacías se versionen con .gitkeep
-!data/.gitkeep
+models/*
 !models/.gitkeep
-!focus/.gitkeep
